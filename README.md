@@ -1,6 +1,8 @@
 # SJTU 选课魔咒
 
-> version: v0.0.2
+> version: v0.0.3-alpha
+
+欢迎所有建议、意见和各位大佬 PR 🦾
 
 ## 功能✌
 

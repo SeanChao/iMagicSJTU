@@ -1,6 +1,6 @@
 /**
  * WELCOME TO SJTU of Witchcraft and Wizardry
- * Version: v0.0.2-alpha
+ * Version: v0.0.3-alpha
  */
 
 var config = {
@@ -47,9 +47,9 @@ async function run(config) {
         await listAllCoursesInfo(false);
         //select
         if (config.times != 0)
-            console.log('正在尝试第' + (count + 1) + '/' + config.times + '次');
+            console.log(new Date().toLocaleString() + ' 正在尝试第' + (count + 1) + '/' + config.times + '次');
         else
-            console.log('正在尝试第' + (count + 1) + '次');
+            console.log(new Date().toLocaleString() + ' 正在尝试第' + (count + 1) + '次');
         await runGetClasses(targetList, config.unitInterval);
         console.log('让我睡个觉觉，' + config.taskInterval + "ms");
         await sleep(config.taskInterval);
@@ -79,18 +79,25 @@ async function listAllCoursesInfo(log = true) {
     // get all of the courses
     a = document.querySelector("#contentBox")
     allCourses = document.querySelectorAll("#contentBox > div.tjxk_list > div.panel ");
+    await Promise.all(Array.from(allCourses).map(async course => {
+        allClasses = course.querySelectorAll("div.panel-body > table > tbody > tr ");
+        for (tClass of allClasses) {
+            courseObj = tClass.parentNode.parentNode.parentNode.parentNode.childNodes[0];
+            await loadJxbxxZzxk(courseObj);
+            await sleep(1); // have to just wait a moment for animation to be loaded
+        }
+    }))
+    console.log('loading...');
+    console.debug("Promise listAllClasses done");
+    // loop for sequential courses display
     for (course of allCourses) {
-        //         console.log(course); // log the whole block
+        if (!log) break;
         const courseName = course.querySelector("div > h3 > span > a").innerText;
         const credits = course.querySelector("div > h3 > span > i").innerText;
         if (log) console.log(courseName + '\t' + credits);
         allClasses = course.querySelectorAll("div.panel-body > table > tbody > tr ");
-        const classAmount = allClasses.length;
         for (tClass of allClasses) {
             courseObj = tClass.parentNode.parentNode.parentNode.parentNode.childNodes[0];
-            await loadJxbxxZzxk(courseObj);
-            await sleep(1);
-            // have to just wait a moment for animation to be loaded
             const classId = tClass.querySelector('td.jxbmc > a').innerText;
             const teacher = tClass.querySelector("td.jsxm").innerText;
             const prof = tClass.querySelector("td.jszc").innerText;
@@ -117,7 +124,16 @@ async function runGetClasses(targetList, interval) {
     )
     await Promise.all(promises).then(async (res) => {// console.log(res);
         for (var idx = 0; idx < res.length; idx++) {//                     console.log(bufferedList[idx]);
-            var name; if (res[idx] != 2) { name = (await getClassById(config['semesterPrefix'] + bufferedList[idx])).courseName; } switch (res[idx]) { case 0: { console.info('👏👏👏 选到「' + name + '」辣！'); targetList.splice(idx, 1); break; } case 1: { console.warn("😐 「" + name + "」被抢爆啦，稍后试试"); break; } case 2: { console.warn('🤔 当前页面上没有id为「' + bufferedList[idx] + '」的这门课哦'); break; } case 3: { console.info('😎 你已经有「' + name + '」啦！'); targetList.splice(idx, 1); break; } }
+            var name;
+            if (res[idx] != 2) {
+                name = (await getClassById(config['semesterPrefix'] + bufferedList[idx])).courseName;
+            }
+            switch (res[idx]) {
+                case 0: { console.info('👏👏👏 选到「' + name + '」辣！'); targetList.splice(idx, 1); break; }
+                case 1: { console.warn("😐 「" + name + "」被抢爆啦，稍后试试"); break; }
+                case 2: { console.warn('🤔 当前页面上没有id为「' + bufferedList[idx] + '」的这门课哦'); break; }
+                case 3: { console.info('😎 你已经有「' + name + '」啦！'); targetList.splice(idx, 1); break; }
+            }
         }
     }, (err) => { console.log(err); })
     //         console.log(targetList);
@@ -141,11 +157,9 @@ function rate(selected, capacity) {
 }
 
 async function getClassById(tClassId) {
-    //     console.log("[debug]===in getClassById===");
     const allClasses = document.querySelectorAll("td.jxbmc");
     for (tClass of allClasses) {
         if (tClass.querySelector("a").innerText === tClassId) {
-            //                 console.log("Found " + tClassId + "!");
             p = tClass.parentNode;
             console.debug(p);
             const courseName = p.parentNode.parentNode.parentNode.parentNode.querySelector('.panel-title a').innerText;
@@ -172,7 +186,6 @@ async function getClassById(tClassId) {
                 "selected": selected,
                 "btn": btn,
             }
-            //             console.log('\t- ' + teacher + ' ' + prof + ' ' + time + ' ' + location + ' ' + selected + '/' + capacity + ' ' + rate(selected, capacity) + '; id:' + classId);
             console.debug(classJson);
             return classJson;
         }
